@@ -16,7 +16,7 @@ while read LINE || [[ -n $LINE ]]; do
 	IP=$(echo $LINE | cut -d ';' -f 2)
 	[ -z $IP ] && continue
 	echo -n "$HOST ($IP) is "
-	ping -n 1 -w 1000 $IP > /dev/null	
+	ping -c 1 -w 1 $IP > /dev/null	
 	# if host is up, increment AWAKE
 	if [[ $? -eq 0 ]]; then 
 		echo "up."

@@ -1,6 +1,21 @@
-#!/usr/bin/bash
-# Check if there is a connection via Webinterface or in of the Apps
-if netstat | grep 'fozzie:https\|fozzie:5000\|fozzie:5001\|fozzie:5006' | grep ESTABLISHED > /dev/null; then
-        log "Active connection to HTTPS, WebDAV or other DSM App"
-        cancel
+#!/bin/bash
+# Checks for established connections on a specific port. 
+
+PORTFILE=ports.txt
+AWAKE=0
+
+if [ ! -r $PORTFILE ]; then
+    echo "ERROR: Port file $PORTFILE cannot be read."
+	exit 1
 fi
+
+# (read the last line regardless of a newline char)
+while read PORT || [[ -n $LINE ]]; do
+    [ -z $PORT ] && continue
+	netstat -ten | grep -e ":$PORT.*ESTABLISHED" 
+    # if any connection found, increment AWAKE
+    if [[ $? -eq 0 ]]; then
+        ((AWAKE++))
+   fi 
+done < $PORTFILE
+
