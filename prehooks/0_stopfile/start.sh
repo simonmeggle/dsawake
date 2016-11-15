@@ -6,9 +6,8 @@
 
 ROOT=$(dirname `readlink -f $0`)
 if [[ -f $ROOT/disabled ]]; then 
-	echo "==> Shutdown allowed (module is disabled)"
 	exit 0
 else
-	echo "==> Shutdown NOT allowed (module is active)"
+	echo "==> Shutdown generally NOT allowed (module is active)"
 	exit 1
 fi 
