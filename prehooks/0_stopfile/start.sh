@@ -4,11 +4,11 @@
 # - does not exist: exit
 
 
-if [[ -f ./disabled ]]; then 
-	echo "==> Shutdown allowed (Plugin is disabled)"
+ROOT=$(dirname `readlink -f $0`)
+if [[ -f $ROOT/disabled ]]; then 
+	echo "==> Shutdown allowed (module is disabled)"
 	exit 0
 else
-	echo "==> Shutdown NOT allowed (Plugin is active)"
+	echo "==> Shutdown NOT allowed (module is active)"
 	exit 1
 fi 
-	

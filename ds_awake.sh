@@ -1,4 +1,22 @@
 #!/bin/bash
+#title           :ds_awake.sh
+#description     :a modular script to keep Synology Diskstation (or any other s
+#                 bashable system running as long as all plugins are returning a
+#                 rc > 0. Disable plugins simply by putting a file "disabled" into
+#                 the plugin folder. Use pre/host hooks to execute additional
+#                 tasks. Prehooks are able to interrupt the script.
+#                 Schedule this script by cron e.g. for */5 minutes.
+#author		       :Simon Meggle
+#date            :20161115
+#version         :0.1
+#usage		       :bash ds_awake.sh
+#-----------------------------------
+# inspired by:
+# - http://www.synology-wiki.de/index.php/Automatisches_Herunterfahren_wenn_kein_Ping_m%C3%B6glich
+# - http://blog.host-consultants.de/2013/09/synology-nas-bei-nichtgebrauch-herunterfahren/
+#==============================================================================
+
+
 
 ROOT=$(dirname `readlink -f $0`)
 LOGFILE="/var/log/$(basename $0).log"
@@ -10,11 +28,12 @@ log() {
 }
 
 function main() {
+	cd $ROOT
 	log "===== START $(basename $0) ====="
 	log "----- Calling pre-hooks"
-	call_modules prehooks || return 
+	call_modules prehooks || return
 	log "----- Calling plugins"
-	call_modules plugins || return 
+	call_modules plugins || return
 	log "----- Calling post-hooks"
 	call_modules posthooks
 	log "----- Shutdown."
@@ -28,19 +47,26 @@ function call_modules() {
 	MTYPE=$1
 	# shutdown DS only if var is still zero in the end
 	ALLOW_SHUTDOWN=0
-	if [ ! -d $ROOT/$MTYPE ]; then 
+	echo $ALLOW_SHUTDOWN
+	if [ ! -d $ROOT/$MTYPE ]; then
 		log "ERROR: $ROOT/$MTYPE does not exist. Exiting."
 		exit 1
-	fi 
-	for d in $(ls -d $ROOT/$MTYPE/* ); do 
+	fi
+	for d in $(ls -d $ROOT/$MTYPE/* ); do
 		module=$( basename $d | sed -e 's/\///' )
-		# skip the module if disabled 
+		# skip the module if disabled
 		[[ -f $MTYPE/$module/disabled ]] && log "$ALLOW_SHUTDOWN - module $module: ###disabled###" && continue
-		log "$ALLOW_SHUTDOWN - module $module: Starting..."
-		pushd $MTYPE/$module > /dev/null
-		bash start.sh 
-		let "ALLOW_SHUTDOWN=$ALLOW_SHUTDOWN+$?"
-		popd > /dev/null
+		if [ -r $MTYPE/$module/start.sh ]; then
+			log "$ALLOW_SHUTDOWN - module $module: Starting..."
+			# evaluate return code of start.sh, not tee
+			set -o pipefail
+			bash $MTYPE/$module/start.sh | tee -a $LOGFILE
+			let "ALLOW_SHUTDOWN=$ALLOW_SHUTDOWN+$?"
+			set +o pipefail
+		else
+			let "ALLOW_SHUTDOWN=$ALLOW_SHUTDOWN+1"
+			log "ERROR: $MTYPE/$module/start.sh could not be found!"
+		fi
 	done
 	log "$MTYPE result: $ALLOW_SHUTDOWN"
 	return $ALLOW_SHUTDOWN
